@@ -1,0 +1,4 @@
+pyTelegramBotAPI==4.29.1
+python-dotenv==1.1.1
+matplotlib==3.10.7
+numpy==2.3.4
