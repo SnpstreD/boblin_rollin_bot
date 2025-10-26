@@ -44,7 +44,7 @@ def create_new_calc(message):
     )
 
     text = """
-        Выберите тип ролла (advantage и тд)
+        Выберите 🔄 Тип броска:
     """
 
     msg = bot.send_message(
@@ -107,6 +107,14 @@ def handle_to_hit_input(message):
     chat_id = message.chat.id
 
     bot.delete_message(chat_id, session_handler.get_user_data(user_id, 'last_bot_message_id'))
+
+    param_data = PARAMETERS['to_hit_roll']
+    is_valid = param_data['validator'](message.text)
+    if not is_valid:
+        error_text = param_data['error_text']
+        msg = bot.send_message(chat_id, error_text, parse_mode='html')
+        session_handler.update_session(user_id, last_bot_message_id=msg.message_id)
+        return  # Не сохраняем невалидное значение
 
     # Сохраняем to-hit roll и переходим к следующему шагу
     session_handler.update_session(
@@ -173,6 +181,14 @@ def handle_damage_input(message):
 
     bot.delete_message(chat_id, session_handler.get_user_data(user_id, 'last_bot_message_id'))
     
+    param_data = PARAMETERS['damage_roll']
+    is_valid = param_data['validator'](message.text)
+    if not is_valid:
+        error_text = param_data['error_text']
+        msg = bot.send_message(chat_id, error_text, parse_mode='html')
+        session_handler.update_session(user_id, last_bot_message_id=msg.message_id)
+        return  # Не сохраняем невалидное значение
+
     session_handler.update_session(
         user_id,
         step='adjusting_parameters',
@@ -246,7 +262,7 @@ def handle_parameter_text_input(message):
 
     param_slug = current_step.replace('editing_', '')
     param_data = PARAMETERS[param_slug]
-    
+
     if 'validator' in param_data:
         is_valid = param_data['validator'](message.text)
         if not is_valid:
@@ -254,7 +270,7 @@ def handle_parameter_text_input(message):
             msg = bot.send_message(chat_id, error_text, parse_mode='html')
             session_handler.update_session(user_id, last_bot_message_id=msg.message_id)
             return  # Не сохраняем невалидное значение
-        
+
     new_value = message.text
     if 'converter' in param_data:
         try:
@@ -298,7 +314,7 @@ def show_graphs(call):
 
     if dice_dist.damage_roll.strip():
         normal_dmg_img = dice_dist.plot_damage_distribution('normal')
-        bot.send_photo(chat_id, normal_dmg_img, caption="⚔️ Normal Damage Distribution")
+        bot.send_photo(chat_id, normal_dmg_img, caption="🩸 Normal Damage Distribution")
 
         crit_dmg_img = dice_dist.plot_damage_distribution('critical')
         bot.send_photo(chat_id, crit_dmg_img, caption="💥 Critical Damage Distribution")

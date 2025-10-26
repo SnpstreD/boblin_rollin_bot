@@ -2,14 +2,21 @@ import re
 
 
 def validate_dice_notation(text):
-    """Проверяет корректность нотации броска одной регуляркой"""
+    """Проверяет корректность нотации броска костей D&D"""
     if not text or not text.strip():
         return False
 
-    clean_text = text.replace(' ', '')
+    clean_text = text.replace(' ', '').replace('к', 'd').replace('К', 'd').lower()
+    
+    # Проверяем допустимые символы и базовые ошибки
+    if (not all(char in '+-0123456789d' for char in clean_text) or
+        re.search(r'[+-]{2,}', clean_text) or
+        clean_text[-1] in '+-' or
+        re.search(r'd[^0-9]|d$', clean_text)):  # Убрал проверку ^d\d*0
+        return False
 
-    pattern = r'^([+-]?(?:(?:[1-9]\d{0,2})?d[1-9]\d{0,2}|[1-9]\d{0,2})(?:[+-](?:(?:[1-9]\d{0,2})?d[1-9]\d{0,2}|[1-9]\d{0,2}))*)$'
-
+    # Основная проверка паттерна - запрещаем лидирующие нули и d0
+    pattern = r'^([+-]?(?:(?:[1-9]\d*)?d[1-9]\d*|[1-9]\d*)(?:[+-](?:(?:[1-9]\d*)?d[1-9]\d*|[1-9]\d*))*)$'
     return bool(re.match(pattern, clean_text))
 
 

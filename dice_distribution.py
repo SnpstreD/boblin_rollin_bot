@@ -16,10 +16,12 @@ def parse_dice_notation(notation: str) -> Tuple[List, int]:
     if not notation:
         return [], 0
 
+    clean_notation = notation.replace(' ', '').replace('к', 'd').replace('К', 'd').lower()
+
     dice = []
     flat = 0
 
-    for token in re.findall(r'([+-]?\d*d\d+|[-+]?\d+)', notation.replace(' ', '')):
+    for token in re.findall(r'([+-]?\d*d\d+|[-+]?\d+)', clean_notation.replace(' ', '')):
         if 'd' in token:
             # Обрабатываем знак
             sign = -1 if token.startswith('-') else 1
