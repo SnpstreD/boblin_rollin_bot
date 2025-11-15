@@ -1,0 +1,12 @@
+*
+
+!bot.py
+!config.py
+!d20_distributions.json
+!dice_distribution.py
+!keyboard_utils.py
+!params.py
+!session_manager.py
+!text_utils.py
+!requirements.txt
+!Dockerfile
