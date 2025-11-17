@@ -30,7 +30,7 @@ def send_help(message):
 @bot.message_handler(commands=['new_calc', 'reset'])
 def create_new_calc(message):
     user_id = message.from_user.id
-    
+
     # Создаем словарь с дефолтными значениями всех параметров
     default_params = {}
     for param_slug, param_data in PARAMETERS.items():
@@ -139,6 +139,7 @@ def handle_to_hit_input(message):
 
     session_handler.update_session(user_id, last_bot_message_id=msg.message_id)
 
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('add_damage_roll:') and session_handler.get_user_step(call.from_user.id) == 'choosing_to_enter_damage')
 def handle_damage_choice(call):
     """Обработка выбора Damage Roll"""
@@ -148,7 +149,7 @@ def handle_damage_choice(call):
     chat_id = call.message.chat.id
 
     bot.delete_message(chat_id, session_handler.get_user_data(user_id, 'last_bot_message_id'))
-    
+
     if call.data == 'add_damage_roll:1':
         session_handler.update_session(
             user_id,
@@ -180,7 +181,7 @@ def handle_damage_input(message):
     chat_id = message.chat.id
 
     bot.delete_message(chat_id, session_handler.get_user_data(user_id, 'last_bot_message_id'))
-    
+
     param_data = PARAMETERS['damage_roll']
     is_valid = param_data['validator'](message.text)
     if not is_valid:
@@ -194,7 +195,7 @@ def handle_damage_input(message):
         step='adjusting_parameters',
         damage_roll=message.text
     )
-    
+
     show_parameters(user_id, message.chat.id)
 
 
@@ -218,7 +219,7 @@ def handle_parameter_change(call):
             **{param_slug: new_value}
         )
         show_parameters(user_id, chat_id)
-        
+
     elif param_type == 'user_text':  # изменить условие: параметр вводится со строки
         # принять сообщение с новым значением параметра
         session_handler.update_session(
@@ -323,13 +324,13 @@ def show_graphs(call):
 def show_parameters(user_id: int, chat_id: int):
     """Шаг 4: Показываем дополнительные параметры для изменения"""
     user_data = session_handler.get_user_data(user_id)
-    
+
     # Обновляем шаг
     session_handler.update_session(
         user_id,
         step='adjusting_parameters'
     )
-    
+
     parameters_text = generate_parameters_text(user_data)
 
     markup = create_parameters_menu()
@@ -341,7 +342,7 @@ def show_parameters(user_id: int, chat_id: int):
 if __name__ == "__main__":
     print("🎲 D&D Dice Bot запущен!")
     print(f"🤖 Активных сессий: {len(session_handler.sessions)}")
-    
+
     try:
         bot.infinity_polling()
     except Exception as e:
