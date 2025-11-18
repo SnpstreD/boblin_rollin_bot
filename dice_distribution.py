@@ -1,6 +1,7 @@
 import re
 import io
 from collections import defaultdict
+import json
 from typing import Dict, Tuple, List
 
 import matplotlib
@@ -10,13 +11,14 @@ import numpy as np
 
 
 def parse_dice_notation(notation: str) -> Tuple[List, int]:
-    """ Функция принимает строку с нотацией дайс ролла и возвращает
-        распаршенную строку со значениями дайсов и суммой абсолютный модификаторов
+    """ Функция принимает строку с нотацией дайс ролла
+        и возвращает распаршенную строку со значениями дайсов
+        и суммой абсолютных модификаторов
     """
-    if not notation:
+    if not notation or not notation.strip():
         return [], 0
 
-    clean_notation = notation.replace(' ', '').replace('к', 'd').replace('К', 'd').lower()
+    clean_notation = notation.replace(' ', '').replace('к', 'd').replace('К', 'd').replace('D', 'd').lower()
 
     dice = []
     flat = 0
@@ -26,12 +28,12 @@ def parse_dice_notation(notation: str) -> Tuple[List, int]:
             # Обрабатываем знак
             sign = -1 if token.startswith('-') else 1
             clean_token = token.lstrip('+-')
-            
+
             # Парсим количество дайсов и значение
             count_str, faces_str = clean_token.split('d')
             count = int(count_str) if count_str else 1
             faces = int(faces_str)
-            
+
             # Добавляем кубы с учетом знака
             dice.extend([sign * faces] * count)
         else:
@@ -40,19 +42,15 @@ def parse_dice_notation(notation: str) -> Tuple[List, int]:
     return dice, flat
 
 
-def calculate_d20_distribution(advantage_status: int = 0) -> Dict[np.int64, np.float64]:
-    d20_values = np.arange(1, 21)
+def calculate_d20_distribution(advantage_status: int = 0,
+                               halfling_luck_active: bool = False) -> Dict[int, float]:
 
-    advantage_formulas = {
-        -1: lambda x: (41 - 2 * x) / 400,  # Disadvantage
-        0: lambda x: np.full(20, 1 / 20),  # No Advantage
-        1: lambda x: (2 * x - 1) / 400,  # Advantage
-        2: lambda x: (x ** 3 - (x - 1) ** 3) / 8000  # Super Advantage
-    }
+    with open('d20_distributions.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
 
-    probs = advantage_formulas[advantage_status](d20_values)
+    params = f'({advantage_status}, {halfling_luck_active})'
 
-    return dict(zip(d20_values, probs))
+    return {int(k): float(v) for k, v in data[params].items()}
 
 
 class DiceDistribution:
@@ -126,7 +124,7 @@ class DiceDistribution:
                     prob_master[val_d20 + val_modifiers] += prob_d20 * prob_modifiers
 
         return prob_master
-    
+
     @property
     def damage_distribution(self):
         dice_list, flat_modifiers = self.damage_dice_modifiers, self.damage_flat_modifiers
@@ -175,28 +173,28 @@ class DiceDistribution:
 
     def plot_to_hit_distribution(self, save_path=None):
         hit_distribution = self.to_hit_distribution
-        
+
         # Подготовка данных
         values = sorted(hit_distribution.keys())
         probs = np.array([hit_distribution[v] * 100 for v in values])
-        
+
         # Критические значения
         crit_miss_val = min(values) - 1
         crit_hit_val = max(values) + 1
         crit_miss_prob = self.critical_miss_probability * 100
         crit_hit_prob = self.critical_hit_probability * 100
-        
+
         # Объединяем данные
         all_values = [crit_miss_val] + values + [crit_hit_val]
         all_probs = [crit_miss_prob] + list(probs) + [crit_hit_prob]
-        
+
         # Расчет CDF
         reverse_cdf = np.cumsum(all_probs[::-1])[::-1]
-        
+
         # Создаем график
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
         fig.subplots_adjust(hspace=0.25)
-        
+
         # Верхний график: распределение
         ax1.bar(values, probs, color='blue', alpha=0.7, label='Normal values', width=0.6)
         ax1.bar([crit_miss_val, crit_hit_val], [crit_miss_prob, crit_hit_prob],
@@ -205,7 +203,7 @@ class DiceDistribution:
         ax1.set_title('To hit distribution', pad=15, fontsize=14, fontweight='bold')
         ax1.grid(True, linestyle=':', alpha=0.5)
         ax1.legend(fontsize=10, framealpha=0.8)
-        
+
         # Нижний график: CDF
         ax2.plot(all_values, reverse_cdf, 'g-', alpha=0.7, label='P(X ≥ x)', linewidth=1.8)
         ax2.plot(all_values, reverse_cdf, 'go', markersize=5)
@@ -248,24 +246,24 @@ class DiceDistribution:
         # Подготовка данных
         values = sorted(distribution.keys())
         probs = np.array([distribution[v] * 100 for v in values])
-        
+
         # Расчет среднего урона
         mean_damage = sum(v * p/100 for v, p in zip(values, probs))
         title = f'{title}\n(average value: {mean_damage:.1f})'
-        
+
         # Расчет CDF
         reverse_cdf = np.cumsum(probs[::-1])[::-1]
-        
+
         # Создаем график
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
         fig.subplots_adjust(hspace=0.25)
-        
+
         # Верхний график: распределение
         ax1.bar(values, probs, color='orange', alpha=0.7, width=0.7)
         ax1.set_ylabel('Probability (%)', fontsize=12)
         ax1.set_title(title, pad=15, fontsize=14, fontweight='bold')
         ax1.grid(True, linestyle=':', alpha=0.5)
-        
+
         # Нижний график: CDF
         ax2.plot(values, reverse_cdf, 'r-', alpha=0.7, label='P(X ≥ x)', linewidth=1.8)
         ax2.plot(values, reverse_cdf, 'ro', markersize=4)
@@ -280,7 +278,7 @@ class DiceDistribution:
                               for i, v in enumerate(values)]
         else:
             display_labels = [str(v) for v in values]
-        
+
         for ax in [ax1, ax2]:
             ax.set_xticks(values)
             ax.set_xticklabels(display_labels, fontsize=10)
@@ -289,7 +287,7 @@ class DiceDistribution:
         plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
         plt.close(fig)
         img_buffer.seek(0)
-        
+
         return img_buffer
 
 
