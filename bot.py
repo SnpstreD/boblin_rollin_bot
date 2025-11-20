@@ -315,10 +315,19 @@ def show_graphs(call):
 
     if dice_dist.damage_roll.strip():
         normal_dmg_img = dice_dist.plot_damage_distribution('normal')
-        bot.send_photo(chat_id, normal_dmg_img, caption="🩸 Normal Damage Distribution")
+        bot.send_photo(chat_id,
+                       normal_dmg_img,
+                       caption="🩸 Normal Damage Distribution")
 
         crit_dmg_img = dice_dist.plot_damage_distribution('critical')
-        bot.send_photo(chat_id, crit_dmg_img, caption="💥 Critical Damage Distribution")
+        bot.send_photo(chat_id,
+                       crit_dmg_img,
+                       caption="💥 Critical Damage Distribution")
+
+        avg_dmg_vs_ac_img = dice_dist.plot_average_damage_vs_ac()
+        bot.send_photo(chat_id,
+                       avg_dmg_vs_ac_img,
+                       caption="⚔️🛡️ Average Damage vs AC Graph")
 
 
 def show_parameters(user_id: int, chat_id: int):

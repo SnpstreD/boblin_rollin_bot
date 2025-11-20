@@ -171,6 +171,35 @@ class DiceDistribution:
 
         return normal_dist, crit_dist
 
+    @property
+    def damage_vs_ac_distribution(self):
+        normal_dmg_dist, crit_dmg_dist = self.damage_distribution
+
+        avg_normal_dmg = sum(val * prob for val, prob in normal_dmg_dist.items())
+        avg_crit_dmg = sum(val * prob for val, prob in crit_dmg_dist.items())
+
+        critical_hit_probability = self.critical_hit_probability
+
+        to_hit_distribution = self.to_hit_distribution
+
+        dmg_vs_ac_distribution = {}
+
+        max_to_hit_value = min(
+            sum(self.d20_dice_modifiers) + self.d20_flat_modifiers + 23,
+            31
+        )
+
+        for ac in range(8, max_to_hit_value):
+            expected_damage = sum(
+                avg_normal_dmg * prob
+                for val, prob in to_hit_distribution.items()
+                if val >= ac
+            ) + avg_crit_dmg * critical_hit_probability
+
+            dmg_vs_ac_distribution[ac] = expected_damage
+
+        return dmg_vs_ac_distribution
+
     def plot_to_hit_distribution(self, save_path=None):
         hit_distribution = self.to_hit_distribution
 
@@ -286,6 +315,32 @@ class DiceDistribution:
         img_buffer = io.BytesIO()
         plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
         plt.close(fig)
+        img_buffer.seek(0)
+
+        return img_buffer
+
+    def plot_average_damage_vs_ac(self, save_path=None):
+        ac_damage_dict = self.damage_vs_ac_distribution
+        ac_values = list(ac_damage_dict.keys())
+        avg_damage_values = list(ac_damage_dict.values())
+
+        plt.figure(figsize=(12, 6))
+        plt.plot(ac_values, avg_damage_values, 'b-', linewidth=2, marker='o', markersize=4)
+        plt.xlabel('Armor Class (AC)', fontsize=12)
+        plt.ylabel('Average Damage', fontsize=12)
+        plt.title('Average Damage vs Armor Class', fontsize=14, fontweight='bold')
+        plt.grid(True, linestyle=':', alpha=0.7)
+
+        plt.xticks(ac_values, fontsize=10)
+
+        # Добавляем подписи значений
+        for ac, damage in zip(ac_values, avg_damage_values):
+            plt.annotate(f'{damage:.1f}', (ac, damage), textcoords="offset points",
+                         xytext=(0, 5), ha='center', fontsize=8)
+
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
+        plt.close()
         img_buffer.seek(0)
 
         return img_buffer
